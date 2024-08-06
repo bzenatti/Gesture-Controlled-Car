@@ -44,7 +44,9 @@ void setup() {
     lcd.begin(16, 2);
 
     // Print a message to the LCD.
-    lcd.print("hello, world!");
+    lcd.print("Start with NEAR");
+	lcd.setCursor(0,1);
+	lcd.print("    gesture    ");
 
     // Initialize Serial port
     Serial.begin(9600);
@@ -94,42 +96,67 @@ void handleGesture() {
 		Serial.println((int)startFLAG);
 		Serial.println((int)endFLAG);
 
-
         if(gesture == DIR_UP && startFLAG == 1 && endFLAG == 0){
 			Serial.println("UP");
 			commandSequence[qntGest] = 1;
 			qntGest++;
+			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
+			lcd.print("^");
+			cursorLCD++;
+			lcd.print(",");
+			cursorLCD++;
 		}
 		else if(gesture == DIR_RIGHT && startFLAG == 1 && endFLAG == 0) {
 			Serial.println("RIGHT");
 			commandSequence[qntGest] = 2;
 			qntGest++;
+			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
+			lcd.print(">");
+			cursorLCD++;
+			lcd.print(",");
+			cursorLCD++;
 		}
 		else if(gesture == DIR_LEFT && startFLAG == 1 && endFLAG == 0){
 			Serial.println("LEFT");
 			commandSequence[qntGest] = 3;
-			qntGest++;			
+			qntGest++;
+			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
+			lcd.print("<");
+			cursorLCD++;
+			lcd.print(",");
+			cursorLCD++;
 		}
 		else if(gesture == DIR_DOWN && startFLAG == 1 && endFLAG == 0 && qntGest > 1){
 			Serial.println("DOWN");
 			qntGest--;
 			commandSequence[qntGest] = 0;
+			cursorLCD--;
+			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
+			lcd.print(" ");
+			cursorLCD--;
+			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
+			lcd.print(" ");
 		}
-		else if((gesture == DIR_NEAR) && (startFLAG == 0) && (endFLAG == 0)){
+		else if(gesture == DIR_NEAR && startFLAG == 0 && endFLAG == 0){
+			lcd.clear();
 			Serial.println("NEAR");
 			commandSequence[qntGest] = 10;
 			qntGest++;
 			startFLAG = 1;
+			lcd.setCursor(0,0);
+			lcd.print("{");
+			cursorLCD++;
 		}
 		else if((gesture == DIR_FAR) && (startFLAG == 1) && (endFLAG == 0)){
 			Serial.println("FAR");
 			commandSequence[qntGest] = -10;
 			qntGest++;
 			endFLAG = 1;
+			lcd.setCursor(((cursorLCD - 1) % 16),((cursorLCD - 1) / 16));
+			lcd.print("}");
 		}
 		else {
 			Serial.println("NONE");
 		}
-          
     }
 }
