@@ -12,7 +12,6 @@ IMPORTANT: The APDS-9960 can only accept 3.3V!
  D22          SCL              I2C Clock
  25           INT              Interrupt
 
-
 ****************************************************************/
 
 #include <Wire.h>
@@ -31,7 +30,7 @@ int isr_flag = 0;
 int commandSequence[50] = {0};
 int qntGest = 0;
 int cursorLCD = 0;
-int startFLAG = 0, finishFLAG = 0;
+int startFLAG = 0, endFLAG = 0;
 
 // Initializing LCD
 LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
@@ -70,6 +69,9 @@ void setup() {
     } else {
         Serial.println(F("Something went wrong during gesture sensor init!"));
     }
+
+	// Turn on the display:
+    lcd.display();
 }
 
 void loop() {
@@ -79,8 +81,6 @@ void loop() {
         isr_flag = 0;
         attachInterrupt(APDS9960_INT, interruptRoutine, FALLING);
     }
-    // Turn on the display:
-    lcd.display();
 }
 
 void interruptRoutine() {
@@ -89,39 +89,47 @@ void interruptRoutine() {
 
 void handleGesture() {
     if(apds.isGestureAvailable()){
-        switch ( apds.readGesture() ) {
-            case DIR_UP:
-                Serial.println("UP");
-                commandSequence[qntGest] = 1;
-                qntGest++;
-                break;
-            case DIR_LEFT:
-                Serial.println("LEFT");
-                commandSequence[qntGest] = 2;
-                qntGest++;
-                break;
-            case DIR_RIGHT:
-                Serial.println("RIGHT");
-                commandSequence[qntGest] = 3;
-                qntGest++;
-                break;
-            case DIR_DOWN:
-                Serial.println("DOWN");
-                qntGest--;
-                commandSequence[qntGest] = 0;
-                break;
-            case DIR_NEAR:
-                Serial.println("NEAR");
-                commandSequence[qntGest] = -10;
-                qntGest++;
-                break;
-            case DIR_FAR:
-                Serial.println("FAR");
-                commandSequence[qntGest] = 10;
-                qntGest++;
-                break;
-            default:
-                Serial.println("NONE");
-          }
+		int gesture = apds.readGesture();
+		Serial.println((int)gesture);
+		Serial.println((int)startFLAG);
+		Serial.println((int)endFLAG);
+
+
+        if(gesture == DIR_UP && startFLAG == 1 && endFLAG == 0){
+			Serial.println("UP");
+			commandSequence[qntGest] = 1;
+			qntGest++;
+		}
+		else if(gesture == DIR_RIGHT && startFLAG == 1 && endFLAG == 0) {
+			Serial.println("RIGHT");
+			commandSequence[qntGest] = 2;
+			qntGest++;
+		}
+		else if(gesture == DIR_LEFT && startFLAG == 1 && endFLAG == 0){
+			Serial.println("LEFT");
+			commandSequence[qntGest] = 3;
+			qntGest++;			
+		}
+		else if(gesture == DIR_DOWN && startFLAG == 1 && endFLAG == 0 && qntGest > 1){
+			Serial.println("DOWN");
+			qntGest--;
+			commandSequence[qntGest] = 0;
+		}
+		else if((gesture == DIR_NEAR) && (startFLAG == 0) && (endFLAG == 0)){
+			Serial.println("NEAR");
+			commandSequence[qntGest] = 10;
+			qntGest++;
+			startFLAG = 1;
+		}
+		else if((gesture == DIR_FAR) && (startFLAG == 1) && (endFLAG == 0)){
+			Serial.println("FAR");
+			commandSequence[qntGest] = -10;
+			qntGest++;
+			endFLAG = 1;
+		}
+		else {
+			Serial.println("NONE");
+		}
+          
     }
 }
