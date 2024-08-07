@@ -19,7 +19,24 @@ IMPORTANT: The APDS-9960 can only accept 3.3V!
 #include "LiquidCrystal.h"
 
 // Pins
-#define APDS9960_INT    25 // Interrupt pin
+#define APDS9960_INT 	25 // Interrupt pin
+
+#define PINO_TRIG 		4  // Pino D4 conectado ao TRIG do HC-SR04
+#define PINO_ECHO 		2  // Pino D2 conectado ao ECHO do HC-SR04
+
+#define DC1_INPUT1		27
+#define DC1_INPUT2		26
+#define DC1_ENABLE		14		
+#define DC2_INPUT3		33
+#define DC2_INPUT4		32
+#define DC2_ENABLE		13
+
+// Define PWM properties
+const int freq = 30000;
+const int pwmChannelA = 0;
+const int pwmChannelB = 1;
+const int resolution = 8;
+int dutyCicle = 255;
 
 void interruptRoutine();
 void handleGesture();
@@ -54,7 +71,29 @@ void setup() {
     Serial.println(F("--------------------------------"));
     Serial.println(F("SparkFun APDS-9960 - GestureTest"));
     Serial.println(F("--------------------------------"));
-    
+
+	// HC-SR04 Pins
+	pinMode(PINO_TRIG, OUTPUT); // Configura o pino TRIG como saída
+  	pinMode(PINO_ECHO, INPUT); // Configura o pino ECHO como entrada
+
+	pinMode(DC1_INPUT1, OUTPUT);
+    pinMode(DC1_INPUT2, OUTPUT);
+    pinMode(DC1_ENABLE, OUTPUT);
+    pinMode(DC2_INPUT3, OUTPUT);
+    pinMode(DC2_INPUT4, OUTPUT);
+    pinMode(DC2_ENABLE, OUTPUT);
+
+	// configure LEDC PWM
+	ledcSetup(pwmChannelA,freq,resolution);
+	ledcSetup(pwmChannelB,freq,resolution);
+
+	// Attach the PWM channels to the pins
+ 	ledcAttachPin(DC1_ENABLE, pwmChannelA);
+  	ledcAttachPin(DC2_ENABLE, pwmChannelB);
+
+	digitalWrite(DC2_INPUT3, LOW);
+	digitalWrite(DC2_INPUT4, LOW);
+
     // Initialize interrupt service routine
     attachInterrupt(APDS9960_INT, interruptRoutine, FALLING);
 
@@ -75,20 +114,42 @@ void setup() {
 }
 
 void loop() {
-    if(isr_flag == 1) {
+    if((isr_flag) && !(endFLAG)) {
         detachInterrupt(APDS9960_INT);
         handleGesture();
         isr_flag = 0;
         attachInterrupt(APDS9960_INT, interruptRoutine, FALLING);
     }
-	if(endFLAG == 1) {
-		Serial.println("Sequencia de comandos:");
-		for(int i = 0;i < qntGest;i++){
-			Serial.print((int)commandSequence[i]);
-			Serial.print("  i = ");
-			Serial.println((int)i);
+	if(endFLAG) {
+
+		digitalWrite(PINO_TRIG, LOW);
+		delayMicroseconds(2);
+		digitalWrite(PINO_TRIG, HIGH);
+		delayMicroseconds(10);
+		digitalWrite(PINO_TRIG, LOW);
+	
+		long duracao = pulseIn(PINO_ECHO, HIGH); // Mede o tempo de resposta do ECHO
+		float distancia = (duracao * 0.0343) / 2;// Calcula a distância usando a velocidade do som (aproximadamente 343 m/s)
+		Serial.println(distancia);
+		if(distancia < 10){
+				Serial.println("Teste");
+			  // Example: Move Motor A forward
+  				digitalWrite(DC1_INPUT1, HIGH);
+  				digitalWrite(DC1_INPUT2, LOW);
+  				ledcWrite(pwmChannelA, dutyCicle);  // Set speed (0-255)
+
+  				// Example: Move Motor B backward
+				digitalWrite(DC2_INPUT3, HIGH);
+				digitalWrite(DC2_INPUT4, LOW);
+				ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
+				
+				delay(1000);
+
+				// Stop both motors
+				ledcWrite(pwmChannelA, 0);
+				ledcWrite(pwmChannelB, 0);
+				Serial.println("Teste2");
 		}
-		endFLAG = 0;
 	}
 }
 
@@ -99,7 +160,7 @@ void interruptRoutine() {
 void handleGesture() {
     if(apds.isGestureAvailable()){
 		int gesture = apds.readGesture();
-
+		Serial.println(gesture);
         if(gesture == DIR_UP && startFLAG == 1 && endFLAG == 0){
 			commandSequence[qntGest] = 3;
 			qntGest++;
@@ -132,7 +193,7 @@ void handleGesture() {
 		}
 		else if(gesture == DIR_DOWN && startFLAG == 1 && endFLAG == 0 && qntGest > 1){
 			qntGest--;
-			commandSequence[qntGest] = 4;
+			commandSequence[qntGest] = 0;
 
 			cursorLCD--;
 			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
