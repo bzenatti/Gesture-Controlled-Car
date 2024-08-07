@@ -40,7 +40,7 @@ void setup() {
     // Set interrupt pin as input
     pinMode(APDS9960_INT, INPUT);
     
-    // set up the LCD's number of columns and rows:
+    // Set up the LCD's number of columns and rows:
     lcd.begin(16, 2);
 
     // Print a message to the LCD.
@@ -59,30 +59,37 @@ void setup() {
     attachInterrupt(APDS9960_INT, interruptRoutine, FALLING);
 
     // Initialize APDS-9960 (configure I2C and initial values)
-    if ( apds.init() ) {
+    if(apds.init())
         Serial.println(F("APDS-9960 initialization complete"));
-    } else {
+	else
         Serial.println(F("Something went wrong during APDS-9960 init!"));
-    }
     
     // Start running the APDS-9960 gesture sensor engine
-    if ( apds.enableGestureSensor(true) ) {
+    if(apds.enableGestureSensor(true))
         Serial.println(F("Gesture sensor is now running"));
-    } else {
+	else 
         Serial.println(F("Something went wrong during gesture sensor init!"));
-    }
 
 	// Turn on the display:
     lcd.display();
 }
 
 void loop() {
-    if( isr_flag == 1 ) {
+    if(isr_flag == 1) {
         detachInterrupt(APDS9960_INT);
         handleGesture();
         isr_flag = 0;
         attachInterrupt(APDS9960_INT, interruptRoutine, FALLING);
     }
+	if(endFLAG == 1) {
+		Serial.println("Sequencia de comandos:");
+		for(int i = 0;i < qntGest;i++){
+			Serial.print((int)commandSequence[i]);
+			Serial.print("  i = ");
+			Serial.println((int)i);
+		}
+		endFLAG =0;
+	}
 }
 
 void interruptRoutine() {
@@ -98,7 +105,7 @@ void handleGesture() {
 
         if(gesture == DIR_UP && startFLAG == 1 && endFLAG == 0){
 			Serial.println("UP");
-			commandSequence[qntGest] = 1;
+			commandSequence[qntGest] = 3;
 			qntGest++;
 			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
 			lcd.print("^");
@@ -118,7 +125,7 @@ void handleGesture() {
 		}
 		else if(gesture == DIR_LEFT && startFLAG == 1 && endFLAG == 0){
 			Serial.println("LEFT");
-			commandSequence[qntGest] = 3;
+			commandSequence[qntGest] = 1;
 			qntGest++;
 			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
 			lcd.print("<");
@@ -129,7 +136,7 @@ void handleGesture() {
 		else if(gesture == DIR_DOWN && startFLAG == 1 && endFLAG == 0 && qntGest > 1){
 			Serial.println("DOWN");
 			qntGest--;
-			commandSequence[qntGest] = 0;
+			commandSequence[qntGest] = 4;
 			cursorLCD--;
 			lcd.setCursor((cursorLCD % 16),(cursorLCD / 16));
 			lcd.print(" ");
@@ -140,7 +147,7 @@ void handleGesture() {
 		else if(gesture == DIR_NEAR && startFLAG == 0 && endFLAG == 0){
 			lcd.clear();
 			Serial.println("NEAR");
-			commandSequence[qntGest] = 10;
+			commandSequence[qntGest] = 5;
 			qntGest++;
 			startFLAG = 1;
 			lcd.setCursor(0,0);
@@ -149,7 +156,7 @@ void handleGesture() {
 		}
 		else if((gesture == DIR_FAR) && (startFLAG == 1) && (endFLAG == 0)){
 			Serial.println("FAR");
-			commandSequence[qntGest] = -10;
+			commandSequence[qntGest] = 6;
 			qntGest++;
 			endFLAG = 1;
 			lcd.setCursor(((cursorLCD - 1) % 16),((cursorLCD - 1) / 16));
