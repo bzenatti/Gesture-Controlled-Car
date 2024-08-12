@@ -6,6 +6,10 @@
 		{
 			"name": "GestosCarrinho",
 			"path": "."
+		},
+		{
+			"name": "CurvasCarrinho",
+			"path": "../CurvasCarrinho"
 		}
 	],
 	"settings": {}
