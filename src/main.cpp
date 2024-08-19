@@ -12,6 +12,15 @@ IMPORTANT: The APDS-9960 can only accept 3.3V!
  D22          SCL              I2C Clock
  25           INT              Interrupt
 
+LCD:
+V0 - RESISTOR PARA O VSS -
+ ESP32		LCD			Supply
+ GND		Vss			---
+ ---		Vdd			+5V
+
+
+
+
 ****************************************************************/
 
 #include <Wire.h>
@@ -32,11 +41,11 @@ IMPORTANT: The APDS-9960 can only accept 3.3V!
 #define DC2_ENABLE		13
 
 // Define PWM properties
-const int freq = 30000;
+const int freq = 18000;
 const int pwmChannelA = 0;
 const int pwmChannelB = 1;
 const int resolution = 8;
-int dutyCicle = 255;
+int dutyCicle = 210;
 
 void interruptRoutine();
 void handleGesture();
@@ -46,6 +55,8 @@ void rotate_right();
 void forward();
 void stop();
 
+float get_distance();
+
 // Global Variables
 SparkFun_APDS9960 apds = SparkFun_APDS9960();
 int isr_flag = 0;
@@ -53,6 +64,8 @@ int commandSequence[50] = {0};
 int qntGest = 0;
 int cursorLCD = 0;
 int startFLAG = 0, endFLAG = 0;
+int currentGesture = 0;
+int rotate_flag = 0;
 
 // Initializing LCD
 LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
@@ -119,6 +132,9 @@ void setup() {
 }
 
 void loop() {
+	float distance = get_distance();
+	Serial.println(distance);
+
     if((isr_flag) && !(endFLAG)) {
         detachInterrupt(APDS9960_INT);
         handleGesture();
@@ -126,25 +142,48 @@ void loop() {
         attachInterrupt(APDS9960_INT, interruptRoutine, FALLING);
     }
 	if(endFLAG) {
+		while(commandSequence[currentGesture] != 6) {
 
-		digitalWrite(PINO_TRIG, LOW);
-		delayMicroseconds(2);
-		digitalWrite(PINO_TRIG, HIGH);
-		delayMicroseconds(10);
-		digitalWrite(PINO_TRIG, LOW);
-	
-		long duracao = pulseIn(PINO_ECHO, HIGH); // Mede o tempo de resposta do ECHO
-		float distancia = (duracao * 0.0343) / 2;// Calcula a distância usando a velocidade do som (aproximadamente 343 m/s)
-		Serial.println(distancia);
-		if(distancia < 10){
-			forward();
-			delay(100);
-			stop();
+			distance = get_distance();
+			Serial.println(distance);
+
+			if(distance < 10 || rotate_flag){
+				rotate_flag = 0;
+				stop();
+				currentGesture++;
+				if(commandSequence[currentGesture] == 3) {
+					forward();
+				}
+				else if(commandSequence[currentGesture] == 2) {
+					rotate_right();
+					rotate_flag = 1;
+				}
+				else if(commandSequence[currentGesture] == 1) {
+					rotate_left();
+					rotate_flag = 1;
+				}
+			}
 		}
+
+		if(distance < 10) 
+			stop();
+
 	}
 }
 
-void rotate_left() {
+float get_distance(){
+	digitalWrite(PINO_TRIG, LOW);
+	delayMicroseconds(2);
+	digitalWrite(PINO_TRIG, HIGH);
+	delayMicroseconds(10);
+	digitalWrite(PINO_TRIG, LOW);
+
+	long duracao = pulseIn(PINO_ECHO, HIGH); // Mede o tempo de resposta do ECHO
+	float distancia = (duracao * 0.0343) / 2;// Calcula a distância usando a velocidade do som (aproximadamente 343 m/s)
+	return distancia;
+}
+
+void rotate_right() {
 
 	// Move Motor A forward
 	digitalWrite(DC1_INPUT1, HIGH);
@@ -156,14 +195,16 @@ void rotate_left() {
 	digitalWrite(DC2_INPUT4, HIGH);
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
 	
-	delay(600);
+	delay(200);
 
 	// Stop both motors
 	ledcWrite(pwmChannelA, 0);
 	ledcWrite(pwmChannelB, 0);
+	delay(1000);
+
 }
 
-void rotate_right() {
+void rotate_left() {
 	// Move Motor A backward
 	digitalWrite(DC1_INPUT1, LOW);
 	digitalWrite(DC1_INPUT2, HIGH);
@@ -174,7 +215,7 @@ void rotate_right() {
 	digitalWrite(DC2_INPUT4, LOW);
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
 	
-	delay(600);
+	delay(200);
 
 	// Stop both motors
 	ledcWrite(pwmChannelA, 0);
@@ -183,14 +224,20 @@ void rotate_right() {
 
 void forward() {
 	// Move Motor A forward
-	digitalWrite(DC1_INPUT1, HIGH);
-	digitalWrite(DC1_INPUT2, LOW);
+	digitalWrite(DC1_INPUT1, LOW);
+	digitalWrite(DC1_INPUT2, HIGH);
 	ledcWrite(pwmChannelA, dutyCicle);  // Set speed (0-255)
 
 	// Move Motor B backward
-	digitalWrite(DC2_INPUT3, HIGH);
-	digitalWrite(DC2_INPUT4, LOW);
+	digitalWrite(DC2_INPUT3, LOW);
+	digitalWrite(DC2_INPUT4, HIGH);
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
+
+	delay(300);
+	// Stop both motors
+	ledcWrite(pwmChannelA, 0);
+	ledcWrite(pwmChannelB, 0);
+	delay(1000);
 }
 
 void stop(){
@@ -255,11 +302,11 @@ void handleGesture() {
 
 			qntGest++;
 			startFLAG = 1;
-			lcd.setCursor(0,0);
+			lcd.setCursor(0,0);  
 			lcd.print("{");
 			cursorLCD++;
 		}
-		else if((gesture == DIR_FAR) && (startFLAG == 1) && (endFLAG == 0)){
+		else if((gesture == DIR_FAR) && (startFLAG == 1) && (endFLAG == 0) && qntGest > 1){
 			commandSequence[qntGest] = 6;
 			qntGest++;
 
