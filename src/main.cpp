@@ -44,8 +44,8 @@ V0 - RESISTOR PARA O VSS -
 const int freq = 18000;
 const int pwmChannelA = 0;
 const int pwmChannelB = 1;
-const int resolution = 8;
-int dutyCicle = 210;
+const int resolution = 10;
+int dutyCicle = 800;
 
 void interruptRoutine();
 void handleGesture();
@@ -145,11 +145,17 @@ void loop() {
 		while(commandSequence[currentGesture] != 6) {
 
 			distance = get_distance();
-			Serial.println(distance);
-
+			// Serial.println(distance);
+		
 			if(distance < 10 || rotate_flag){
 				rotate_flag = 0;
 				stop();
+
+				if(currentGesture == 0)
+					delay(3000);
+				else 
+					delay(1000);
+				
 				currentGesture++;
 				if(commandSequence[currentGesture] == 3) {
 					forward();
@@ -157,31 +163,41 @@ void loop() {
 				else if(commandSequence[currentGesture] == 2) {
 					rotate_right();
 					rotate_flag = 1;
+					delay(1000);
 				}
 				else if(commandSequence[currentGesture] == 1) {
 					rotate_left();
 					rotate_flag = 1;
+					delay(1000);
 				}
 			}
 		}
 
-		if(distance < 10) 
+		if(distance < 15) 
 			stop();
 
 	}
 }
 
 float get_distance(){
-	digitalWrite(PINO_TRIG, LOW);
-	delayMicroseconds(2);
-	digitalWrite(PINO_TRIG, HIGH);
-	delayMicroseconds(10);
-	digitalWrite(PINO_TRIG, LOW);
+    long sum = 0;
+    int numReadings = 7;  // número de leituras para média
+    for(int i = 0; i < numReadings; i++){
+        digitalWrite(PINO_TRIG, LOW);
+        delayMicroseconds(2);
+        digitalWrite(PINO_TRIG, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(PINO_TRIG, LOW);
 
-	long duracao = pulseIn(PINO_ECHO, HIGH); // Mede o tempo de resposta do ECHO
-	float distancia = (duracao * 0.0343) / 2;// Calcula a distância usando a velocidade do som (aproximadamente 343 m/s)
-	return distancia;
+        long duracao = pulseIn(PINO_ECHO, HIGH);
+        sum += duracao;
+        delay(10);  // pequeno delay entre leituras
+    }
+    float mediaDuracao = sum / numReadings;
+    float distancia = (mediaDuracao * 0.0343) / 2;
+    return distancia;
 }
+
 
 void rotate_right() {
 
@@ -195,7 +211,7 @@ void rotate_right() {
 	digitalWrite(DC2_INPUT4, HIGH);
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
 	
-	delay(200);
+	delay(300);
 
 	// Stop both motors
 	ledcWrite(pwmChannelA, 0);
@@ -215,11 +231,12 @@ void rotate_left() {
 	digitalWrite(DC2_INPUT4, LOW);
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
 	
-	delay(200);
+	delay(300);
 
 	// Stop both motors
 	ledcWrite(pwmChannelA, 0);
 	ledcWrite(pwmChannelB, 0);
+	delay(1000);
 }
 
 void forward() {
@@ -232,12 +249,6 @@ void forward() {
 	digitalWrite(DC2_INPUT3, LOW);
 	digitalWrite(DC2_INPUT4, HIGH);
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
-
-	delay(300);
-	// Stop both motors
-	ledcWrite(pwmChannelA, 0);
-	ledcWrite(pwmChannelB, 0);
-	delay(1000);
 }
 
 void stop(){
