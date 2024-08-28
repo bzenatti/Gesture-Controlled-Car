@@ -1,6 +1,6 @@
 /****************************************************************
 
-Hardware Connections:
+Hardware Connection of APDS:
 
 IMPORTANT: The APDS-9960 can only accept 3.3V!
  
@@ -11,14 +11,6 @@ IMPORTANT: The APDS-9960 can only accept 3.3V!
  D21          SDA              I2C Data
  D22          SCL              I2C Clock
  25           INT              Interrupt
-
-LCD:
-V0 - RESISTOR PARA O VSS -
- ESP32		LCD			Supply
- GND		Vss			---
- ---		Vdd			+5V
-
-
 
 
 ****************************************************************/
@@ -45,7 +37,7 @@ const int freq = 18000;
 const int pwmChannelA = 0;
 const int pwmChannelB = 1;
 const int resolution = 10;
-int dutyCicle = 800;
+int dutyCicle = 820;
 
 void interruptRoutine();
 void handleGesture();
@@ -65,7 +57,7 @@ int qntGest = 0;
 int cursorLCD = 0;
 int startFLAG = 0, endFLAG = 0;
 int currentGesture = 0;
-int rotate_flag = 0;
+// int rotate_flag = 0;
 
 // Initializing LCD
 LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
@@ -133,7 +125,7 @@ void setup() {
 
 void loop() {
 	float distance = get_distance();
-	Serial.println(distance);
+	// Serial.println(distance);
 
     if((isr_flag) && !(endFLAG)) {
         detachInterrupt(APDS9960_INT);
@@ -141,47 +133,36 @@ void loop() {
         isr_flag = 0;
         attachInterrupt(APDS9960_INT, interruptRoutine, FALLING);
     }
-	if(endFLAG) {
+	if(endFLAG && distance < 20) {
 		while(commandSequence[currentGesture] != 6) {
-
-			distance = get_distance();
-			// Serial.println(distance);
-		
-			if(distance < 10 || rotate_flag){
-				rotate_flag = 0;
+			// rotate_flag = 0;
+			stop();
+			delay(1000);
+			
+			currentGesture++;
+			if(commandSequence[currentGesture] == 3) {
+				forward();
+				delay(3000);
 				stop();
-
-				if(currentGesture == 0)
-					delay(3000);
-				else 
-					delay(1000);
-				
-				currentGesture++;
-				if(commandSequence[currentGesture] == 3) {
-					forward();
-				}
-				else if(commandSequence[currentGesture] == 2) {
-					rotate_right();
-					rotate_flag = 1;
-					delay(1000);
-				}
-				else if(commandSequence[currentGesture] == 1) {
-					rotate_left();
-					rotate_flag = 1;
-					delay(1000);
-				}
+			}
+			else if(commandSequence[currentGesture] == 2) {
+				rotate_right();
+				// rotate_flag = 1;
+				// delay(1000);
+			}
+			else if(commandSequence[currentGesture] == 1) {
+				rotate_left();
+				// rotate_flag = 1;
+				// delay(1000);
 			}
 		}
-
-		if(distance < 15) 
-			stop();
 
 	}
 }
 
 float get_distance(){
     long sum = 0;
-    int numReadings = 7;  // número de leituras para média
+    int numReadings = 5;  // número de leituras para média
     for(int i = 0; i < numReadings; i++){
         digitalWrite(PINO_TRIG, LOW);
         delayMicroseconds(2);
@@ -200,7 +181,6 @@ float get_distance(){
 
 
 void rotate_right() {
-
 	// Move Motor A forward
 	digitalWrite(DC1_INPUT1, HIGH);
 	digitalWrite(DC1_INPUT2, LOW);
@@ -212,12 +192,7 @@ void rotate_right() {
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
 	
 	delay(300);
-
-	// Stop both motors
-	ledcWrite(pwmChannelA, 0);
-	ledcWrite(pwmChannelB, 0);
-	delay(1000);
-
+	stop();
 }
 
 void rotate_left() {
@@ -232,11 +207,7 @@ void rotate_left() {
 	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
 	
 	delay(300);
-
-	// Stop both motors
-	ledcWrite(pwmChannelA, 0);
-	ledcWrite(pwmChannelB, 0);
-	delay(1000);
+	stop();
 }
 
 void forward() {
@@ -255,7 +226,6 @@ void stop(){
 	// Stop both motors
 	ledcWrite(pwmChannelA, 0);
 	ledcWrite(pwmChannelB, 0);
-
 }
 
 void interruptRoutine() {
