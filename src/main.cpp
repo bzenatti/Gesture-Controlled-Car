@@ -37,7 +37,8 @@ const int freq = 18000;
 const int pwmChannelA = 0;
 const int pwmChannelB = 1;
 const int resolution = 10;
-int dutyCicle = 820;
+int dutyCicleA = 805;
+int dutyCicleB = 785;
 
 void interruptRoutine();
 void handleGesture();
@@ -142,7 +143,7 @@ void loop() {
 			currentGesture++;
 			if(commandSequence[currentGesture] == 3) {
 				forward();
-				delay(3000);
+				delay(1500);
 				stop();
 			}
 			else if(commandSequence[currentGesture] == 2) {
@@ -162,7 +163,7 @@ void loop() {
 
 float get_distance(){
     long sum = 0;
-    int numReadings = 5;  // número de leituras para média
+    int numReadings = 3;  // número de leituras para média
     for(int i = 0; i < numReadings; i++){
         digitalWrite(PINO_TRIG, LOW);
         delayMicroseconds(2);
@@ -181,32 +182,32 @@ float get_distance(){
 
 
 void rotate_right() {
-	// Move Motor A forward
+	// Move Motor A backward
 	digitalWrite(DC1_INPUT1, HIGH);
 	digitalWrite(DC1_INPUT2, LOW);
-	ledcWrite(pwmChannelA, dutyCicle);  // Set speed (0-255)
+	ledcWrite(pwmChannelA, dutyCicleA);  // Set speed (0-1024)
 
-	// Move Motor B backward
+	// Move Motor B forward
 	digitalWrite(DC2_INPUT3, LOW);
 	digitalWrite(DC2_INPUT4, HIGH);
-	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
+	ledcWrite(pwmChannelB, dutyCicleB);  // Set speed (0-1024)
 	
-	delay(300);
+	delay(270);
 	stop();
 }
 
 void rotate_left() {
-	// Move Motor A backward
+	// Move Motor A forward
 	digitalWrite(DC1_INPUT1, LOW);
 	digitalWrite(DC1_INPUT2, HIGH);
-	ledcWrite(pwmChannelA, dutyCicle);  // Set speed (0-255)
+	ledcWrite(pwmChannelA, dutyCicleA);  // Set speed (0-1024)
 
-	// Move Motor B forward
+	// Move Motor B backward
 	digitalWrite(DC2_INPUT3, HIGH);
 	digitalWrite(DC2_INPUT4, LOW);
-	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
+	ledcWrite(pwmChannelB, dutyCicleB);  // Set speed (0-1024)
 	
-	delay(300);
+	delay(270);
 	stop();
 }
 
@@ -214,12 +215,12 @@ void forward() {
 	// Move Motor A forward
 	digitalWrite(DC1_INPUT1, LOW);
 	digitalWrite(DC1_INPUT2, HIGH);
-	ledcWrite(pwmChannelA, dutyCicle);  // Set speed (0-255)
+	ledcWrite(pwmChannelA, dutyCicleA);  // Set speed (0-1024)
 
 	// Move Motor B backward
 	digitalWrite(DC2_INPUT3, LOW);
 	digitalWrite(DC2_INPUT4, HIGH);
-	ledcWrite(pwmChannelB, dutyCicle);  // Set speed (0-255)
+	ledcWrite(pwmChannelB, dutyCicleB);  // Set speed (0-1024)
 }
 
 void stop(){
